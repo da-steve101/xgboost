@@ -158,11 +158,11 @@ SEXP XGDMatrixSetInfo_R(SEXP handle, SEXP field, SEXP array) {
     }
     CHECK_CALL(XGDMatrixSetGroup(R_ExternalPtrAddr(handle), BeginPtr(vec), len));
   } else if (!strcmp("cmplxFtr", name)) {
-    std::vector< xgboost::cmplx > vec;
+    std::vector< xgboost::cmplx > vec(len);
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < len; ++i) {
       Rcomplex tmp = COMPLEX(array)[i];
-      vec.push_back( xgboost::bst_cmplx((float)tmp.r, (float)tmp.i ) );
+      vec[i] = xgboost::bst_cmplx((float)tmp.r, (float)tmp.i );
     }
     CHECK_CALL(XGDMatrixSetComplexInfo(R_ExternalPtrAddr(handle),
 				       CHAR(asChar(field)),

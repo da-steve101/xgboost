@@ -192,8 +192,17 @@ DMatrix* DMatrix::Load(const std::string& uri,
       if (is.PeekRead(&magic, sizeof(magic)) == sizeof(magic) &&
           magic == data::SimpleCSRSource::kMagic) {
         std::unique_ptr<data::SimpleCSRSource> source(new data::SimpleCSRSource());
+	// move this into the std::move
+	std::vector<cmplx> cvals;
+	unsigned cindex;
+	source->cmplx_data_ = &(cvals);
+	source->cindex_ = &(cindex);
         source->LoadBinary(&is);
         DMatrix* dmat = DMatrix::Create(std::move(source), cache_file);
+	std::vector<cmplx> &cmplxFtr = dmat->GetCmplxFtr();
+	cmplxFtr = cvals;
+	unsigned &cidx = dmat->GetCmplxIdx();
+	cidx = cindex;
         if (!silent) {
           LOG(CONSOLE) << dmat->info().num_row << 'x' << dmat->info().num_col << " matrix with "
                        << dmat->info().num_nonzero << " entries loaded from " << uri;
@@ -251,6 +260,8 @@ void DMatrix::SaveToLocalFile(const std::string& fname) {
   data::SimpleCSRSource source;
   source.CopyFrom(this);
   std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname.c_str(), "w"));
+  source.cmplx_data_ = &(this->GetCmplxFtr());
+  source.cindex_ = &(this->GetCmplxIdx());
   source.SaveBinary(fo.get());
 }
 

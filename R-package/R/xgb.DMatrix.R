@@ -247,7 +247,7 @@ setinfo.xgb.DMatrix <- function(object, name, info) {
     return(TRUE)
   }
   if ( name == "cmplxFtr" ) {
-    if (length(info) != xgb.numrow(dmat))
+    if (length(info) != nrow(object))
       stop("The length of cmplxFtr must equal to the number of rows in the input data")
     if ( typeof(info) != "complex" )
       stop("cmplxFtr must of type complex")

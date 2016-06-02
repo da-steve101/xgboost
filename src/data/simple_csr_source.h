@@ -34,9 +34,9 @@ class SimpleCSRSource : public DataSource {
   /*! \brief data in the CSR sparse storage */
   std::vector<RowBatch::Entry> row_data_;
   /*! \brief complex feature data */
-  std::vector<cmplx> cmplx_data_;
+  std::vector<cmplx> * cmplx_data_; // TODO: make this the complex feature copy for matrix? ie remove from DMatrix
   /*! \brief complex feature index */
-  bst_uint cindex_; // TODO: move to info?
+  bst_uint * cindex_; // TODO: move to info?
   // functions
   /*! \brief default constructor */
   SimpleCSRSource() : row_ptr_(1, 0), at_first_(true) {}

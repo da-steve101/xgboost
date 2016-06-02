@@ -64,11 +64,21 @@ void SimpleCSRSource::LoadBinary(dmlc::Stream* fi) {
   int tmagic;
   CHECK(fi->Read(&tmagic, sizeof(tmagic)) == sizeof(tmagic)) << "invalid input file format";
   CHECK_EQ(tmagic, kMagic) << "invalid format, magic number mismatch";
-  fi->Read(&cindex_, sizeof(cindex_));
+  CHECK(fi->Read(&cindex_, sizeof(cindex_)) == sizeof(cindex_)) << "invalid input file format";
   info.LoadBinary(fi);
   fi->Read(&row_ptr_);
   fi->Read(&row_data_);
-  // fi->Read(&cmplx_data_); causing errors ... dont save for now
+  // A temporary hack to be able to load complex feature
+  std::vector<bst_float> cmplxR(0);
+  std::vector<bst_float> cmplxI(0);
+  cmplxR.resize( info.num_row );
+  cmplxI.resize( info.num_row );
+  fi->Read(dmlc::BeginPtr(cmplxR), info.num_row*sizeof(bst_float));
+  fi->Read(dmlc::BeginPtr(cmplxI), info.num_row*sizeof(bst_float));
+  (*cmplx_data_).resize(0);
+  (*cmplx_data_).reserve( cmplxR.size() );
+  for ( unsigned i = 0; i < cmplxR.size(); i++ )
+    (*cmplx_data_).push_back( bst_cmplx( cmplxR[i], cmplxI[i] ) );
 }
 
 void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
@@ -78,7 +88,17 @@ void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
   info.SaveBinary(fo);
   fo->Write(row_ptr_);
   fo->Write(row_data_);
-  // fo->Write(cmplx_data_); causing errors ... dont save for now
+  // A temporary hack to be able to save complex feature
+  std::vector<bst_float> cmplxR(0);
+  std::vector<bst_float> cmplxI(0);
+  cmplxR.reserve( (*cmplx_data_).size() );
+  cmplxI.reserve( (*cmplx_data_).size() );
+  for ( unsigned i = 0; i < (*cmplx_data_).size(); i++ ) {
+    cmplxR.push_back( (*cmplx_data_)[i].r );
+    cmplxI.push_back( (*cmplx_data_)[i].i );
+  }
+  fo->Write(dmlc::BeginPtr(cmplxR), cmplxR.size()*sizeof(bst_float));
+  fo->Write(dmlc::BeginPtr(cmplxI), cmplxR.size()*sizeof(bst_float));
 }
 
 void SimpleCSRSource::BeforeFirst() {
@@ -92,6 +112,8 @@ bool SimpleCSRSource::Next() {
   batch_.base_rowid = 0;
   batch_.ind_ptr = dmlc::BeginPtr(row_ptr_);
   batch_.data_ptr = dmlc::BeginPtr(row_data_);
+  batch_.cmplxVals = dmlc::BeginPtr((*cmplx_data_));
+  batch_.useCmplx = ((*cmplx_data_).size() > 0);
   return true;
 }
 

@@ -403,8 +403,9 @@ int XGDMatrixSetComplexInfo(DMatrixHandle handle,
   std::vector<cmplx> &vec = static_cast<DMatrix*>(handle)->GetCmplxFtr();
   bst_uint &cindex = static_cast<DMatrix*>(handle)->GetCmplxIdx();
   cindex = static_cast<DMatrix*>(handle)->info().num_col;
+  vec.resize(0);
   vec.reserve(len);
-  for ( bst_uint i = 0; i < len; ++i )
+  for ( bst_ulong i = 0; i < len; ++i )
     vec.push_back( info[i] );
   API_END();
 }
@@ -461,6 +462,7 @@ int XGDMatrixGetComplexInfo(const DMatrixHandle handle,
   const std::vector<cmplx>* vec = nullptr;
   if (!std::strcmp(field, "cmplxFtr")) {
     vec = &(static_cast<const DMatrix*>(handle)->GetCmplxFtr());
+    LOG(WARNING) << "Complex Ftr size = " << vec->size();
   } else {
     LOG(FATAL) << "Unknown float field name " << field;
   }
