@@ -395,6 +395,20 @@ int XGDMatrixSetFloatInfo(DMatrixHandle handle,
   API_END();
 }
 
+int XGDMatrixSetComplexInfo(DMatrixHandle handle,
+                          const char* field,
+                          const cmplx* info,
+                          bst_ulong len) {
+  API_BEGIN();
+  std::vector<cmplx> &vec = static_cast<DMatrix*>(handle)->GetCmplxFtr();
+  bst_uint &cindex = static_cast<DMatrix*>(handle)->GetCmplxIdx();
+  cindex = static_cast<DMatrix*>(handle)->info().num_col;
+  vec.reserve(len);
+  for ( bst_uint i = 0; i < len; ++i )
+    vec.push_back( info[i] );
+  API_END();
+}
+
 int XGDMatrixSetUIntInfo(DMatrixHandle handle,
                          const char* field,
                          const unsigned* info,
@@ -431,6 +445,22 @@ int XGDMatrixGetFloatInfo(const DMatrixHandle handle,
     vec = &info.weights;
   } else if (!std::strcmp(field, "base_margin")) {
     vec = &info.base_margin;
+  } else {
+    LOG(FATAL) << "Unknown float field name " << field;
+  }
+  *out_len = static_cast<bst_ulong>(vec->size());
+  *out_dptr = dmlc::BeginPtr(*vec);
+  API_END();
+}
+
+int XGDMatrixGetComplexInfo(const DMatrixHandle handle,
+			    const char* field,
+			    bst_ulong* out_len,
+			    const cmplx** out_dptr) {
+  API_BEGIN();
+  const std::vector<cmplx>* vec = nullptr;
+  if (!std::strcmp(field, "cmplxFtr")) {
+    vec = &(static_cast<const DMatrix*>(handle)->GetCmplxFtr());
   } else {
     LOG(FATAL) << "Unknown float field name " << field;
   }

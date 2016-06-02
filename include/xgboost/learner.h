@@ -147,6 +147,7 @@ class Learner : public rabit::Serializable {
    * \param ntree_limit limit the number of trees used in prediction
    */
   inline void Predict(const SparseBatch::Inst &inst,
+		      const cmplx cval,
                       bool output_margin,
                       std::vector<float> *out_preds,
                       unsigned ntree_limit = 0) const;
@@ -170,10 +171,11 @@ class Learner : public rabit::Serializable {
 
 // implementation of inline functions.
 inline void Learner::Predict(const SparseBatch::Inst& inst,
+			     const cmplx cval,
                              bool output_margin,
                              std::vector<float>* out_preds,
                              unsigned ntree_limit) const {
-  gbm_->Predict(inst, out_preds, ntree_limit);
+  gbm_->Predict(inst, cval, out_preds, ntree_limit);
   if (out_preds->size() == 1) {
     (*out_preds)[0] += base_score_;
   }

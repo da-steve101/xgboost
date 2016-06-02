@@ -37,7 +37,7 @@ xgb.iter.update <- function(booster, dtrain, iter, obj = NULL) {
   if (is.null(obj)) {
     .Call("XGBoosterUpdateOneIter_R", booster, as.integer(iter), dtrain,
           PACKAGE = "xgboost")
-    } else {
+  } else {
     pred <- predict(booster, dtrain)
     gpair <- obj(pred, dtrain)
     succ <- xgb.iter.boost(booster, dtrain, gpair)

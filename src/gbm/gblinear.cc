@@ -200,6 +200,7 @@ class GBLinear : public GradientBooster {
     }
   }
   void Predict(const SparseBatch::Inst &inst,
+	       const cmplx cval,
                std::vector<float> *out_preds,
                unsigned ntree_limit,
                unsigned root_index) override {

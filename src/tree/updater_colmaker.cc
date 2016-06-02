@@ -156,6 +156,8 @@ class ColMaker: public TreeUpdater {
             feat_index.push_back(i);
           }
         }
+	if ( fmat.UseCmplx() )
+	  feat_index.push_back(fmat.GetCmplxIdx());
         unsigned n = static_cast<unsigned>(param.colsample_bytree * feat_index.size());
         std::shuffle(feat_index.begin(), feat_index.end(), common::GlobalRandom());
         CHECK_GT(n, 0)
@@ -591,7 +593,9 @@ class ColMaker: public TreeUpdater {
             << "colsample_bylevel is too small that no feature can be included";
         feat_set.resize(n);
       }
-      dmlc::DataIter<ColBatch>* iter = p_fmat->ColIterator(feat_set);
+      p_tree->GenLeafCmplx( p_fmat->GetCmplxFtr(), position );
+      const std::vector<cmplx> nodeCmplx = p_tree->GetNodeCvals();
+      dmlc::DataIter<ColBatch>* iter = p_fmat->ColIterator(feat_set, nodeCmplx, position);
       while (iter->Next()) {
         this->UpdateSolution(iter->Value(), gpair, *p_fmat);
       }
@@ -672,7 +676,7 @@ class ColMaker: public TreeUpdater {
       }
       std::sort(fsplits.begin(), fsplits.end());
       fsplits.resize(std::unique(fsplits.begin(), fsplits.end()) - fsplits.begin());
-      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits);
+      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits, tree.GetNodeCvals(), position);
       while (iter->Next()) {
         const ColBatch &batch = iter->Value();
         for (size_t i = 0; i < batch.size; ++i) {
@@ -686,7 +690,10 @@ class ColMaker: public TreeUpdater {
             const float fvalue = col[j].fvalue;
             // go back to parent, correct those who are not default
             if (!tree[nid].is_leaf() && tree[nid].split_index() == fid) {
-              if (fvalue < tree[nid].split_cond()) {
+	      if ( (fvalue < tree[nid].split_cond() &&
+		    tree[nid].split_index() != p_fmat->GetCmplxIdx() ) ||
+		   (!tree[nid].split_cmplx().within(p_fmat->GetCmplxFtr()[col[j].index], tree[nid].split_cond()) &&
+		    tree[nid].split_index() == p_fmat->GetCmplxIdx() ) ) {
                 this->SetEncodePosition(ridx, tree[nid].cleft());
               } else {
                 this->SetEncodePosition(ridx, tree[nid].cright());
@@ -805,7 +812,7 @@ class DistColMaker : public ColMaker<TStats> {
             boolmap[j] = 0;
         }
       }
-      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits);
+      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits, tree.GetNodeCvals(), this->position);
       while (iter->Next()) {
         const ColBatch &batch = iter->Value();
         for (size_t i = 0; i < batch.size; ++i) {
@@ -818,7 +825,10 @@ class DistColMaker : public ColMaker<TStats> {
             const float fvalue = col[j].fvalue;
             const int nid = this->DecodePosition(ridx);
             if (!tree[nid].is_leaf() && tree[nid].split_index() == fid) {
-              if (fvalue < tree[nid].split_cond()) {
+              if ( (fvalue < tree[nid].split_cond() &&
+		    tree[nid].split_index() != p_fmat->GetCmplxIdx() ) ||
+		   (!tree[nid].split_cmplx().within(p_fmat->GetCmplxFtr()[col[j].index], tree[nid].split_cond()) &&
+		    tree[nid].split_index() == p_fmat->GetCmplxIdx() ) ) {
                 if (!tree[nid].default_left()) boolmap[ridx] = 1;
               } else {
                 if (tree[nid].default_left()) boolmap[ridx] = 1;

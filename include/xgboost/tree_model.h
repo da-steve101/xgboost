@@ -14,6 +14,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <random>
 #include "./base.h"
 #include "./data.h"
 #include "./logging.h"
@@ -78,7 +79,7 @@ class TreeModel {
    public:
     Node() : sindex_(0) {
       // assert compact alignment
-      static_assert(sizeof(Node) == 4 * sizeof(int) + sizeof(Info),
+      static_assert(sizeof(Node) == 4 * sizeof(int) + sizeof(Info) + sizeof(cmplx),
                     "Node: 64 bit align");
     }
     /*! \brief index of left child */
@@ -112,6 +113,14 @@ class TreeModel {
     /*! \return get split condition of the node */
     inline TSplitCond split_cond() const {
       return (this->info_).split_cond;
+    }
+    /*! \brief get cmplx split point of the node */
+    inline cmplx split_cmplx(void) const {
+      return this->split_cmplx_val;
+    }
+    /*! \brief get cmplx split point of the node */
+    inline void split_cmplx( cmplx new_cmplx) {
+      this->split_cmplx_val = new_cmplx;
     }
     /*! \brief get parent of the node */
     inline int parent() const {
@@ -183,6 +192,8 @@ class TreeModel {
     unsigned sindex_;
     // extra info
     Info info_;
+    // complex split point
+    cmplx split_cmplx_val;
     // set parent
     inline void set_parent(int pidx, bool is_left_child = true) {
       if (is_left_child) pidx |= (1U << 31);
@@ -199,6 +210,8 @@ class TreeModel {
   std::vector<TNodeStat> stats;
   // leaf vector, that is used to store additional information
   std::vector<bst_float> leaf_vector;
+  // which index is complex ftr
+  unsigned cindex;
   // allocate a new node,
   // !!!!!! NOTE: may cause BUG here, nodes.resize
   inline int AllocNode() {
@@ -262,6 +275,7 @@ class TreeModel {
     param.num_roots = 1;
     param.num_deleted = 0;
     nodes.resize(1);
+    cindex = -1;
   }
   /*! \brief get node given nid */
   inline Node& operator[](int nid) {
@@ -270,6 +284,37 @@ class TreeModel {
   /*! \brief get node given nid */
   inline const Node& operator[](int nid) const {
     return nodes[nid];
+  }
+  /*! \brief set node leaf cvalues */
+  inline void GenLeafCmplx( const std::vector<cmplx> cmplxFtr,
+			    const std::vector<int> position ) {
+    for ( unsigned nid = 0; nid < nodes.size(); nid++ ) {
+      if ( !nodes[nid].is_leaf() ) continue;
+      // get vector of indexs that have value == nid
+      std::vector<unsigned> idxs;// the positions that have value == nid
+      for ( unsigned i = 0; i < position.size(); ++i ) {
+	if ( position[i] == static_cast<int>(nid) )
+	  idxs.push_back( i );
+      }
+      cmplx new_split = ( idxs.size() == 0 ) ?
+	cmplxFtr[ rand() % cmplxFtr.size() ] :
+	cmplxFtr[ idxs[ rand() % idxs.size() ] ];
+      nodes[nid].split_cmplx( new_split );
+    }
+  }
+  /*! \brief get node cvalues */
+  inline const std::vector<cmplx> GetNodeCvals( void ) const {
+    std::vector<cmplx> nodeCmplx;
+    nodeCmplx.reserve(nodes.size());
+    for ( size_t nid = 0; nid < nodes.size(); nid++ )
+      nodeCmplx.push_back( nodes[nid].split_cmplx() );
+    return nodeCmplx;
+  }
+  inline const unsigned getCmplxIdx( void ) const {
+    return cindex;
+  }
+  inline void setCmplxIdx( unsigned cidx ) {
+    cindex = cidx;
   }
   /*! \brief get node statistics given nid */
   inline NodeStat& stat(int nid) {
@@ -426,9 +471,15 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
     inline void Init(size_t size);
     /*!
      * \brief fill the vector with sparse vector
-     * \param inst The sparse instance to fil.
+     * \param inst The sparse instance to fill.
      */
     inline void Fill(const RowBatch::Inst& inst);
+    /*!
+     * \brief fill the vector with sparse vector
+     * \param inst The sparse instance to fill.
+     * \param cval a complex feature to include
+     */
+    inline void Fill(const RowBatch::Inst& inst, const cmplx cval );
     /*!
      * \brief drop the trace after fill, must be called after fill.
      * \param inst The sparse instanc to drop.
@@ -440,6 +491,11 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
      * \return the i-th feature value
      */
     inline float fvalue(size_t i) const;
+    /*!
+     * \brief get the complex value of this instance.
+     * \return the complex value of this instance.
+     */
+    inline cmplx cvalue() const;
     /*!
      * \brief check whether i-th entry is missing
      * \param i feature index.
@@ -457,6 +513,9 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
       int flag;
     };
     std::vector<Entry> data;
+    cmplx cval;
+    int cflag;
+    unsigned cindex;
   };
   /*!
    * \brief get the leaf index
@@ -480,6 +539,13 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
    */
   inline int GetNext(int pid, float fvalue, bool is_unknown) const;
   /*!
+   * \brief get next position of the tree given current pid
+   * \param pid Current node id.
+   * \param fvalue feature value if not missing.
+   * \param is_unknown Whether current required feature is missing.
+   */
+  inline int GetNext(int pid, cmplx cvalue, bool is_unknown) const;
+  /*!
    * \brief dump model to text string
    * \param fmap feature map of feature types
    * \param with_stats whether dump out statistics as well
@@ -492,6 +558,8 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
 // do not need to read if only use the model
 inline void RegTree::FVec::Init(size_t size) {
   Entry e; e.flag = -1;
+  cindex = size; // TODO: have index set some other way
+  cflag = -1;
   data.resize(size);
   std::fill(data.begin(), data.end(), e);
 }
@@ -501,28 +569,43 @@ inline void RegTree::FVec::Fill(const RowBatch::Inst& inst) {
     if (inst[i].index >= data.size()) continue;
     data[inst[i].index].fvalue = inst[i].fvalue;
   }
+  cflag = -1;
 }
 
+inline void RegTree::FVec::Fill(const RowBatch::Inst& inst, const cmplx cvalue) {
+  Fill( inst );
+  cval = cvalue;
+  cflag = 0;
+}
+ 
 inline void RegTree::FVec::Drop(const RowBatch::Inst& inst) {
   for (bst_uint i = 0; i < inst.length; ++i) {
     if (inst[i].index >= data.size()) continue;
     data[inst[i].index].flag = -1;
   }
+  cflag = -1;
 }
 
 inline float RegTree::FVec::fvalue(size_t i) const {
   return data[i].fvalue;
 }
 
+inline cmplx RegTree::FVec::cvalue() const {
+  return cval;
+}
+ 
 inline bool RegTree::FVec::is_missing(size_t i) const {
-  return data[i].flag == -1;
+  return ( i == cindex ) ? cflag == -1 : data[i].flag == -1;
 }
 
 inline int RegTree::GetLeafIndex(const RegTree::FVec& feat, unsigned root_id) const {
   int pid = static_cast<int>(root_id);
   while (!(*this)[pid].is_leaf()) {
     unsigned split_index = (*this)[pid].split_index();
-    pid = this->GetNext(pid, feat.fvalue(split_index), feat.is_missing(split_index));
+    if ( split_index == cindex )
+      pid = this->GetNext(pid, feat.cvalue(), feat.is_missing(split_index));
+    else
+      pid = this->GetNext(pid, feat.fvalue(split_index), feat.is_missing(split_index));
   }
   return pid;
 }
@@ -545,5 +628,22 @@ inline int RegTree::GetNext(int pid, float fvalue, bool is_unknown) const {
     }
   }
 }
+
+/*! \brief get next position of the tree given current pid */
+inline int RegTree::GetNext(int pid, cmplx cvalue, bool is_unknown) const {
+  float split_value = (*this)[pid].split_cond();
+  cmplx split_cmplx_value = (*this)[pid].split_cmplx();
+  if (is_unknown) {
+    return (*this)[pid].cdefault();
+  } else {
+    if ( !split_cmplx_value.within( cvalue, split_value) ) {
+      return (*this)[pid].cleft();
+    } else {
+      return (*this)[pid].cright();
+    }
+  }
+}
+
+ 
 }  // namespace xgboost
 #endif  // XGBOOST_TREE_MODEL_H_

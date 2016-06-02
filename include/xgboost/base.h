@@ -39,7 +39,7 @@
 #define XGBOOST_CUSTOMIZE_GLOBAL_PRNG  XGBOOST_STRICT_R_MODE
 #endif
 
-/*! \brief namespace of xgboo st*/
+/*! \brief namespace of xgboost*/
 namespace xgboost {
 /*!
  * \brief unsigned interger type used in boost,
@@ -50,6 +50,26 @@ typedef uint32_t bst_uint;
 typedef unsigned long bst_ulong;  // NOLINT(*)
 /*! \brief float type, used for storing statistics */
 typedef float bst_float;
+/*! \brief complex type */
+struct bst_cmplx {
+  bst_float r;
+  bst_float i;
+  bst_cmplx( void ) {}
+  bst_cmplx( bst_float r, bst_float i ) : r(r), i(i) {}
+  bst_float distTo( struct bst_cmplx other ) {
+    bst_float tmpR = other.r - r;
+    bst_float tmpI = other.i - i;
+    return tmpR*tmpR + tmpI*tmpI;
+  }
+  bool within( struct bst_cmplx other, bst_float dist ) {
+    return distTo( other ) < dist;
+  }
+  bool operator==( struct bst_cmplx other ) {
+    return ( r == other.r && i == other.i );
+  }
+};
+
+typedef struct bst_cmplx cmplx;
 
 /*! \brief gradient statistics pair usually needed in gradient boosting */
 struct bst_gpair {

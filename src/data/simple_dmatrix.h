@@ -49,7 +49,9 @@ class SimpleDMatrix : public DMatrix {
   }
 
   float GetColDensity(size_t cidx) const override {
-    size_t nmiss = buffered_rowset_.size() - col_size_[cidx];
+    size_t nmiss = ( cidx != this->GetCmplxIdx() ) ?
+      buffered_rowset_.size() - col_size_[cidx] :
+      buffered_rowset_.size() - this->GetCmplxFtr().size();
     return 1.0f - (static_cast<float>(nmiss)) / buffered_rowset_.size();
   }
 
@@ -57,6 +59,10 @@ class SimpleDMatrix : public DMatrix {
 
   dmlc::DataIter<ColBatch>* ColIterator(const std::vector<bst_uint>& fset) override;
 
+  dmlc::DataIter<ColBatch>* ColIterator(const std::vector<bst_uint>& fset,
+					const std::vector<cmplx> nodeSplits,
+					const std::vector<int> positions ) override;
+  
   void InitColAccess(const std::vector<bool>& enabled,
                      float subsample,
                      size_t max_row_perbatch) override;
@@ -89,6 +95,12 @@ class SimpleDMatrix : public DMatrix {
     size_t data_ptr_;
     // temporal space for batch
     ColBatch batch_;
+    // complex feature
+    std::vector<cmplx> * cmplxFtr;
+    // distances
+    std::vector<SparseBatch::Entry> cmplxDist;
+    // index of complex value
+    bst_uint cindex;
   };
 
   // source data pointer.

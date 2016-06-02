@@ -64,17 +64,21 @@ void SimpleCSRSource::LoadBinary(dmlc::Stream* fi) {
   int tmagic;
   CHECK(fi->Read(&tmagic, sizeof(tmagic)) == sizeof(tmagic)) << "invalid input file format";
   CHECK_EQ(tmagic, kMagic) << "invalid format, magic number mismatch";
+  fi->Read(&cindex_, sizeof(cindex_));
   info.LoadBinary(fi);
   fi->Read(&row_ptr_);
   fi->Read(&row_data_);
+  // fi->Read(&cmplx_data_); causing errors ... dont save for now
 }
 
 void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
   int tmagic = kMagic;
   fo->Write(&tmagic, sizeof(tmagic));
+  fo->Write(&cindex_, sizeof(cindex_));
   info.SaveBinary(fo);
   fo->Write(row_ptr_);
   fo->Write(row_data_);
+  // fo->Write(cmplx_data_); causing errors ... dont save for now
 }
 
 void SimpleCSRSource::BeforeFirst() {

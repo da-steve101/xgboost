@@ -191,7 +191,8 @@ getinfo.xgb.DMatrix <- function(object, name) {
     stop("getinfo: name must be character")
   }
   if (name != "label" && name != "weight" &&
-      name != "base_margin" && name != "nrow") {
+      name != "base_margin" && name != "nrow" &&
+      name != "cmplxFtr") {
     stop(paste("getinfo: unknown info name", name))
   }
   if (name != "nrow"){
@@ -242,6 +243,15 @@ setinfo.xgb.DMatrix <- function(object, name, info) {
     if (length(info) != nrow(object))
       stop("The length of labels must equal to the number of rows in the input data")
     .Call("XGDMatrixSetInfo_R", object, name, as.numeric(info),
+          PACKAGE = "xgboost")
+    return(TRUE)
+  }
+  if ( name == "cmplxFtr" ) {
+    if (length(info) != xgb.numrow(dmat))
+      stop("The length of cmplxFtr must equal to the number of rows in the input data")
+    if ( typeof(info) != "complex" )
+      stop("cmplxFtr must of type complex")
+    .Call("XGDMatrixSetInfo_R", object, name, as.complex(info),
           PACKAGE = "xgboost")
     return(TRUE)
   }

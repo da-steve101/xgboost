@@ -277,6 +277,8 @@ struct SplitEntry {
   unsigned sindex;
   /*! \brief split value */
   float split_value;
+  /*! \brief split point for complex ftr */
+  cmplx split_point;
   /*! \brief constructor */
   SplitEntry() : loss_chg(0.0f), sindex(0), split_value(0.0f) {}
   /*!

@@ -95,12 +95,12 @@ SEXP XGDMatrixCreateFromCSC_R(SEXP indptr,
   const double *p_data = REAL(data);
   int nindptr = length(indptr);
   int ndata = length(data);
-  std::vector<bst_ulong> col_ptr_(nindptr);
+  std::vector<xgboost::bst_ulong> col_ptr_(nindptr);
   std::vector<unsigned> indices_(ndata);
   std::vector<float> data_(ndata);
 
   for (int i = 0; i < nindptr; ++i) {
-    col_ptr_[i] = static_cast<bst_ulong>(p_indptr[i]);
+    col_ptr_[i] = static_cast<xgboost::bst_ulong>(p_indptr[i]);
   }
   #pragma omp parallel for schedule(static)
   for (int i = 0; i < ndata; ++i) {
@@ -157,6 +157,16 @@ SEXP XGDMatrixSetInfo_R(SEXP handle, SEXP field, SEXP array) {
       vec[i] = static_cast<unsigned>(INTEGER(array)[i]);
     }
     CHECK_CALL(XGDMatrixSetGroup(R_ExternalPtrAddr(handle), BeginPtr(vec), len));
+  } else if (!strcmp("cmplxFtr", name)) {
+    std::vector< xgboost::cmplx > vec;
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < len; ++i) {
+      Rcomplex tmp = COMPLEX(array)[i];
+      vec.push_back( xgboost::bst_cmplx((float)tmp.r, (float)tmp.i ) );
+    }
+    CHECK_CALL(XGDMatrixSetComplexInfo(R_ExternalPtrAddr(handle),
+				       CHAR(asChar(field)),
+				       BeginPtr(vec), len));
   } else {
     std::vector<float> vec(len);
     #pragma omp parallel for schedule(static)
@@ -174,15 +184,32 @@ SEXP XGDMatrixSetInfo_R(SEXP handle, SEXP field, SEXP array) {
 SEXP XGDMatrixGetInfo_R(SEXP handle, SEXP field) {
   SEXP ret;
   R_API_BEGIN();
-  bst_ulong olen;
+  xgboost::bst_ulong olen;
   const float *res;
-  CHECK_CALL(XGDMatrixGetFloatInfo(R_ExternalPtrAddr(handle),
-                                   CHAR(asChar(field)),
-                                 &olen,
-                                 &res));
-  ret = PROTECT(allocVector(REALSXP, olen));
+  const xgboost::cmplx *resC;
+  const char * fld = CHAR(asChar(field));
+  int cmp = !strcmp(fld, "cmplxFtr" );
+  if ( cmp ) {
+    CHECK_CALL(XGDMatrixGetComplexInfo(R_ExternalPtrAddr(handle),
+				       fld,
+				       &olen,
+				       &resC));
+  } else {
+    CHECK_CALL(XGDMatrixGetFloatInfo(R_ExternalPtrAddr(handle),
+				     fld,
+				     &olen,
+				     &res));
+  }
+  if (cmp)
+    ret = PROTECT(allocVector(CPLXSXP, olen));
+  else
+    ret = PROTECT(allocVector(REALSXP, olen));
   for (size_t i = 0; i < olen; ++i) {
-    REAL(ret)[i] = res[i];
+    if ( cmp ) {
+      COMPLEX(ret)[i].r = (double) resC[i].r;
+      COMPLEX(ret)[i].i = (double) resC[i].i;
+    } else
+      REAL(ret)[i] = res[i];
   }
   UNPROTECT(1);
   R_API_END();
@@ -190,7 +217,7 @@ SEXP XGDMatrixGetInfo_R(SEXP handle, SEXP field) {
 }
 
 SEXP XGDMatrixNumRow_R(SEXP handle) {
-  bst_ulong nrow;
+  xgboost::bst_ulong nrow;
   R_API_BEGIN();
   CHECK_CALL(XGDMatrixNumRow(R_ExternalPtrAddr(handle), &nrow));
   R_API_END();
@@ -198,7 +225,7 @@ SEXP XGDMatrixNumRow_R(SEXP handle) {
 }
 
 SEXP XGDMatrixNumCol_R(SEXP handle) {
-  bst_ulong ncol;
+  xgboost::bst_ulong ncol;
   R_API_BEGIN();
   CHECK_CALL(XGDMatrixNumCol(R_ExternalPtrAddr(handle), &ncol));
   R_API_END();
@@ -294,7 +321,7 @@ SEXP XGBoosterEvalOneIter_R(SEXP handle, SEXP iter, SEXP dmats, SEXP evnames) {
 SEXP XGBoosterPredict_R(SEXP handle, SEXP dmat, SEXP option_mask, SEXP ntree_limit) {
   SEXP ret;
   R_API_BEGIN();
-  bst_ulong olen;
+  xgboost::bst_ulong olen;
   const float *res;
   CHECK_CALL(XGBoosterPredict(R_ExternalPtrAddr(handle),
                             R_ExternalPtrAddr(dmat),
@@ -336,7 +363,7 @@ SEXP XGBoosterLoadModelFromRaw_R(SEXP handle, SEXP raw) {
 SEXP XGBoosterModelToRaw_R(SEXP handle) {
   SEXP ret;
   R_API_BEGIN();
-  bst_ulong olen;
+  xgboost::bst_ulong olen;
   const char *raw;
   CHECK_CALL(XGBoosterGetModelRaw(R_ExternalPtrAddr(handle), &olen, &raw));
   ret = PROTECT(allocVector(RAWSXP, olen));
@@ -351,7 +378,7 @@ SEXP XGBoosterModelToRaw_R(SEXP handle) {
 SEXP XGBoosterDumpModel_R(SEXP handle, SEXP fmap, SEXP with_stats) {
   SEXP out;
   R_API_BEGIN();
-  bst_ulong olen;
+  xgboost::bst_ulong olen;
   const char **res;
   CHECK_CALL(XGBoosterDumpModel(R_ExternalPtrAddr(handle),
                                 CHAR(asChar(fmap)),

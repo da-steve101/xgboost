@@ -104,6 +104,7 @@ class GradientBooster {
    * \sa Predict
    */
   virtual void Predict(const SparseBatch::Inst& inst,
+		       const cmplx cvalue,
                        std::vector<float>* out_preds,
                        unsigned ntree_limit = 0,
                        unsigned root_index = 0) = 0;

@@ -9,6 +9,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/data.h>
+#include <algorithm>
 #include <string>
 #include <memory>
 #include <vector>
@@ -111,7 +112,7 @@ struct SparseBatch {
     /*!
      * \brief constructor with index and value
      * \param index The feature or row index.
-     * \param fvalue THe feature value.
+     * \param fvalue The feature value.
      */
     Entry(bst_uint index, bst_float fvalue) : index(index), fvalue(fvalue) {}
     /*! \brief reversely compare feature values */
@@ -146,6 +147,10 @@ struct RowBatch : public SparseBatch {
   const size_t *ind_ptr;
   /*! \brief array[ind_ptr.back()], content of the sparse element */
   const Entry *data_ptr;
+  /*! \brief the complex value features */
+  const cmplx *cmplxVals;
+  /*! \brief the complex value features */
+  bool useCmplx;
   /*! \brief get i-th row from the batch */
   inline Inst operator[](size_t i) const {
     return Inst(data_ptr + ind_ptr[i], static_cast<bst_uint>(ind_ptr[i + 1] - ind_ptr[i]));
@@ -249,6 +254,10 @@ class DMatrix {
    * \return the column iterator, initialized so that it reads the elements in fset
    */
   virtual dmlc::DataIter<ColBatch>* ColIterator(const std::vector<bst_uint>& fset) = 0;
+  /*! \brief Also set the complex features */
+  virtual dmlc::DataIter<ColBatch> *ColIterator(const std::vector<bst_uint> &fset,
+						const std::vector<cmplx> nodeSplits,
+						const std::vector<int> positions ) = 0;
   /*!
    * \brief check if column access is supported, if not, initialize column access.
    * \param enabled whether certain feature should be included in column access.
@@ -317,8 +326,42 @@ class DMatrix {
    */
   static DMatrix* Create(dmlc::Parser<uint32_t>* parser,
                          const std::string& cache_prefix = "");
-
+  /*! \brief get the complex feature */
+  std::vector<cmplx>& GetCmplxFtr( void ) {
+    return cmplxFtr_;
+  }
+  const std::vector<cmplx>& GetCmplxFtr( void ) const {
+    return cmplxFtr_;
+  }
+  bst_uint& GetCmplxIdx( void ) {
+    return cindex_;
+  }
+  const bst_uint GetCmplxIdx( void ) const {
+    return cindex_;
+  }
+  /*! \brief get a sorted ftr from a cmplx */
+  void UpdateDist( const std::vector<cmplx> nodeSplits,
+		   const std::vector<int> positions,
+		   std::vector<SparseBatch::Entry> &entries ) {
+    if ( entries.size() != cmplxFtr_.size() ) {
+      entries.resize(0);
+      for ( unsigned i = 0; i < cmplxFtr_.size(); i++ )
+        entries.push_back( SparseBatch::Entry( i, 0 ) );
+    }
+    for( unsigned i = 0; i < cmplxFtr_.size(); ++i ) {
+      if ( positions[entries[i].index] >= 0 )
+        entries[i].fvalue = cmplxFtr_[entries[i].index].distTo(nodeSplits[positions[entries[i].index]]);
+    }
+    std::sort( entries.begin(), entries.end(), SparseBatch::Entry::CmpValue );
+  }
+  const bool UseCmplx( void ) const {
+    return cmplxFtr_.size() != 0;
+  }
  private:
+  // cmplx ftr
+  std::vector<cmplx> cmplxFtr_;
+  // cmplx index
+  bst_uint cindex_;
   // allow learner class to access this field.
   friend class LearnerImpl;
   /*! \brief public field to back ref cached matrix. */

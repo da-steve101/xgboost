@@ -207,6 +207,7 @@ class GBTree : public GradientBooster {
     iter->BeforeFirst();
     while (iter->Next()) {
       const RowBatch &batch = iter->Value();
+      const cmplx * cvals = batch.cmplxVals;
       // parallel over local batch
       const bst_omp_uint nsize = static_cast<bst_omp_uint>(batch.size);
       #pragma omp parallel for schedule(static)
@@ -219,7 +220,7 @@ class GBTree : public GradientBooster {
         for (int gid = 0; gid < mparam.num_output_group; ++gid) {
           this->Pred(batch[i],
                      buffer_offset < 0 ? -1 : buffer_offset + ridx,
-                     gid, info.GetRoot(ridx), &feats,
+                     gid, info.GetRoot(ridx), &feats, cvals[i],
                      &preds[ridx * mparam.num_output_group + gid], stride,
                      ntree_limit);
         }
@@ -228,6 +229,7 @@ class GBTree : public GradientBooster {
   }
 
   void Predict(const SparseBatch::Inst& inst,
+	       const cmplx cval,
                std::vector<float>* out_preds,
                unsigned ntree_limit,
                unsigned root_index) override {
@@ -238,7 +240,7 @@ class GBTree : public GradientBooster {
     out_preds->resize(mparam.num_output_group * (mparam.size_leaf_vector+1));
     // loop over output groups
     for (int gid = 0; gid < mparam.num_output_group; ++gid) {
-      this->Pred(inst, -1, gid, root_index, &thread_temp[0],
+      this->Pred(inst, -1, gid, root_index, &thread_temp[0], cval,
                  &(*out_preds)[gid], mparam.num_output_group,
                  ntree_limit);
     }
@@ -291,6 +293,7 @@ class GBTree : public GradientBooster {
       std::unique_ptr<RegTree> ptr(new RegTree());
       ptr->param.InitAllowUnknown(this->cfg);
       ptr->InitModel();
+      ptr->setCmplxIdx( p_fmat->GetCmplxIdx() );
       new_trees.push_back(ptr.get());
       ret->push_back(std::move(ptr));
     }
@@ -349,6 +352,7 @@ class GBTree : public GradientBooster {
                    int bst_group,
                    unsigned root_index,
                    RegTree::FVec *p_feats,
+		   cmplx cval,
                    float *out_pred,
                    size_t stride,
                    unsigned ntree_limit) {
@@ -368,7 +372,7 @@ class GBTree : public GradientBooster {
       }
     }
     if (itop != trees.size()) {
-      p_feats->Fill(inst);
+      p_feats->Fill(inst, cval);
       for (size_t i = itop; i < trees.size(); ++i) {
         if (tree_info[i] == bst_group) {
           int tid = trees[i]->GetLeafIndex(*p_feats, root_index);

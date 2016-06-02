@@ -23,9 +23,13 @@ bool SimpleDMatrix::ColBatchIter::Next() {
   col_data_.resize(col_index_.size(), SparseBatch::Inst(NULL, 0));
   for (size_t i = 0; i < col_data_.size(); ++i) {
     const bst_uint ridx = col_index_[i];
-    col_data_[i] = SparseBatch::Inst
+    if ( ridx == cindex )
+      col_data_[i] = SparseBatch::Inst( dmlc::BeginPtr(cmplxDist), cmplxDist.size() );
+    else {
+      col_data_[i] = SparseBatch::Inst
         (dmlc::BeginPtr(pcol->data) + pcol->offset[ridx],
          static_cast<bst_uint>(pcol->offset[ridx + 1] - pcol->offset[ridx]));
+    }
   }
   batch_.col_index = dmlc::BeginPtr(col_index_);
   batch_.col_data = dmlc::BeginPtr(col_data_);
@@ -52,6 +56,15 @@ dmlc::DataIter<ColBatch>* SimpleDMatrix::ColIterator(const std::vector<bst_uint>
   return &col_iter_;
 }
 
+dmlc::DataIter<ColBatch>* SimpleDMatrix::ColIterator(const std::vector<bst_uint>&fset,
+						     const std::vector<cmplx> nodeSplits,
+						     const std::vector<int> positions ) {
+  this->UpdateDist(nodeSplits, positions, col_iter_.cmplxDist );
+  col_iter_.cmplxFtr = &(this->GetCmplxFtr());
+  col_iter_.cindex = this->GetCmplxIdx();
+  return ColIterator( fset );
+}
+  
 void SimpleDMatrix::InitColAccess(const std::vector<bool> &enabled,
                                   float pkeep,
                                   size_t max_row_perbatch) {

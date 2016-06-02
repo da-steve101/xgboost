@@ -118,6 +118,14 @@ ColIterator(const std::vector<bst_uint>& fset) {
   return col_iter_.get();
 }
 
+dmlc::DataIter<ColBatch>* SparsePageDMatrix::
+ColIterator(const std::vector<bst_uint>& fset,
+	    const std::vector<cmplx> nodeSplits,
+	    const std::vector<int> positions ) {
+  // TODO: implement complex for pages ...
+  return ColIterator( fset );
+}
+
 
 bool SparsePageDMatrix::TryInitColData() {
   // load meta data.
