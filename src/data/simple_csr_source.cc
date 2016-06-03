@@ -21,6 +21,8 @@ void SimpleCSRSource::CopyFrom(DMatrix* src) {
   this->info = src->info();
   dmlc::DataIter<RowBatch>* iter = src->RowIterator();
   iter->BeforeFirst();
+  cmplx_data = src->GetCmplxFtr();
+  cindex = src->GetCmplxIdx();
   while (iter->Next()) {
     const RowBatch &batch = iter->Value();
     for (size_t i = 0; i < batch.size; ++i) {
@@ -64,7 +66,7 @@ void SimpleCSRSource::LoadBinary(dmlc::Stream* fi) {
   int tmagic;
   CHECK(fi->Read(&tmagic, sizeof(tmagic)) == sizeof(tmagic)) << "invalid input file format";
   CHECK_EQ(tmagic, kMagic) << "invalid format, magic number mismatch";
-  CHECK(fi->Read(&cindex_, sizeof(cindex_)) == sizeof(cindex_)) << "invalid input file format";
+  CHECK(fi->Read(&cindex, sizeof(cindex)) == sizeof(cindex)) << "invalid input file format";
   info.LoadBinary(fi);
   fi->Read(&row_ptr_);
   fi->Read(&row_data_);
@@ -75,27 +77,27 @@ void SimpleCSRSource::LoadBinary(dmlc::Stream* fi) {
   cmplxI.resize( info.num_row );
   fi->Read(dmlc::BeginPtr(cmplxR), info.num_row*sizeof(bst_float));
   fi->Read(dmlc::BeginPtr(cmplxI), info.num_row*sizeof(bst_float));
-  (*cmplx_data_).resize(0);
-  (*cmplx_data_).reserve( cmplxR.size() );
+  cmplx_data.resize(0);
+  cmplx_data.reserve( cmplxR.size() );
   for ( unsigned i = 0; i < cmplxR.size(); i++ )
-    (*cmplx_data_).push_back( bst_cmplx( cmplxR[i], cmplxI[i] ) );
+    cmplx_data.push_back( bst_cmplx( cmplxR[i], cmplxI[i] ) );
 }
 
 void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
   int tmagic = kMagic;
   fo->Write(&tmagic, sizeof(tmagic));
-  fo->Write(&cindex_, sizeof(cindex_));
+  fo->Write(&cindex, sizeof(cindex));
   info.SaveBinary(fo);
   fo->Write(row_ptr_);
   fo->Write(row_data_);
   // A temporary hack to be able to save complex feature
   std::vector<bst_float> cmplxR(0);
   std::vector<bst_float> cmplxI(0);
-  cmplxR.reserve( (*cmplx_data_).size() );
-  cmplxI.reserve( (*cmplx_data_).size() );
-  for ( unsigned i = 0; i < (*cmplx_data_).size(); i++ ) {
-    cmplxR.push_back( (*cmplx_data_)[i].r );
-    cmplxI.push_back( (*cmplx_data_)[i].i );
+  cmplxR.reserve( cmplx_data.size() );
+  cmplxI.reserve( cmplx_data.size() );
+  for ( unsigned i = 0; i < cmplx_data.size(); i++ ) {
+    cmplxR.push_back( cmplx_data[i].r );
+    cmplxI.push_back( cmplx_data[i].i );
   }
   fo->Write(dmlc::BeginPtr(cmplxR), cmplxR.size()*sizeof(bst_float));
   fo->Write(dmlc::BeginPtr(cmplxI), cmplxR.size()*sizeof(bst_float));
@@ -112,8 +114,8 @@ bool SimpleCSRSource::Next() {
   batch_.base_rowid = 0;
   batch_.ind_ptr = dmlc::BeginPtr(row_ptr_);
   batch_.data_ptr = dmlc::BeginPtr(row_data_);
-  batch_.cmplxVals = dmlc::BeginPtr((*cmplx_data_));
-  batch_.useCmplx = ((*cmplx_data_).size() > 0);
+  batch_.cmplxVals = dmlc::BeginPtr(cmplx_data);
+  batch_.useCmplx = (cmplx_data.size() > 0);
   return true;
 }
 

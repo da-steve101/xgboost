@@ -112,6 +112,10 @@ class GBTree : public GradientBooster {
     }
   }
 
+  void PrintTree() {
+    trees[0].get()->strTree(0);
+  }
+
   void Load(dmlc::Stream* fi) override {
     CHECK_EQ(fi->Read(&mparam, sizeof(mparam)), sizeof(mparam))
         << "GBTree: invalid model file";

@@ -186,6 +186,10 @@ class DataSource : public dmlc::DataIter<RowBatch> {
    * The subclass need to be able to load this correctly from data.
    */
   MetaInfo info;
+  /*! \brief complex feature data */
+  std::vector<cmplx> cmplx_data;
+  /*! \brief complex feature index */
+  bst_uint cindex; // TODO: move to info?
 };
 
 /*!
@@ -327,41 +331,35 @@ class DMatrix {
   static DMatrix* Create(dmlc::Parser<uint32_t>* parser,
                          const std::string& cache_prefix = "");
   /*! \brief get the complex feature */
-  std::vector<cmplx>& GetCmplxFtr( void ) {
-    return cmplxFtr_;
-  }
-  const std::vector<cmplx>& GetCmplxFtr( void ) const {
-    return cmplxFtr_;
-  }
-  bst_uint& GetCmplxIdx( void ) {
-    return cindex_;
-  }
-  const bst_uint GetCmplxIdx( void ) const {
-    return cindex_;
-  }
+  virtual std::vector<cmplx>& GetCmplxFtr( void ) = 0;
+
+  virtual const std::vector<cmplx>& GetCmplxFtr( void ) const = 0;
+
+  virtual bst_uint& GetCmplxIdx( void ) = 0;
+
+  virtual const bst_uint& GetCmplxIdx( void ) const = 0;
+
   /*! \brief get a sorted ftr from a cmplx */
   void UpdateDist( const std::vector<cmplx> nodeSplits,
 		   const std::vector<int> positions,
 		   std::vector<SparseBatch::Entry> &entries ) {
-    if ( entries.size() != cmplxFtr_.size() ) {
+    const std::vector<cmplx> cmplxFtr = this->GetCmplxFtr();
+    if ( entries.size() != cmplxFtr.size() ) {
       entries.resize(0);
-      for ( unsigned i = 0; i < cmplxFtr_.size(); i++ )
+      for ( unsigned i = 0; i < cmplxFtr.size(); i++ )
         entries.push_back( SparseBatch::Entry( i, 0 ) );
     }
-    for( unsigned i = 0; i < cmplxFtr_.size(); ++i ) {
-      if ( positions[entries[i].index] >= 0 )
-        entries[i].fvalue = cmplxFtr_[entries[i].index].distTo(nodeSplits[positions[entries[i].index]]);
+    for( unsigned i = 0; i < cmplxFtr.size(); ++i ) {
+      int nid = positions[entries[i].index];
+      if ( nid < 0 ) nid = ~nid;
+      entries[i].fvalue = cmplxFtr[entries[i].index].distTo(nodeSplits[nid]);
     }
     std::sort( entries.begin(), entries.end(), SparseBatch::Entry::CmpValue );
   }
   const bool UseCmplx( void ) const {
-    return cmplxFtr_.size() != 0;
+    return this->GetCmplxFtr().size() != 0;
   }
  private:
-  // cmplx ftr
-  std::vector<cmplx> cmplxFtr_;
-  // cmplx index
-  bst_uint cindex_;
   // allow learner class to access this field.
   friend class LearnerImpl;
   /*! \brief public field to back ref cached matrix. */

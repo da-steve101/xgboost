@@ -50,7 +50,8 @@ dmlc::DataIter<ColBatch>* SimpleDMatrix::ColIterator(const std::vector<bst_uint>
   size_t ncol = this->info().num_col;
   col_iter_.col_index_.resize(0);
   for (size_t i = 0; i < fset.size(); ++i) {
-    if (fset[i] < ncol) col_iter_.col_index_.push_back(fset[i]);
+    if (fset[i] < ncol || ( fset[i] == col_iter_.cindex && col_iter_.cmplxFtr->size() != 0 ) )
+      col_iter_.col_index_.push_back(fset[i]);
   }
   col_iter_.BeforeFirst();
   return &col_iter_;

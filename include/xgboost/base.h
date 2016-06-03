@@ -56,12 +56,12 @@ struct bst_cmplx {
   bst_float i;
   bst_cmplx( void ) {}
   bst_cmplx( bst_float r, bst_float i ) : r(r), i(i) {}
-  bst_float distTo( struct bst_cmplx other ) {
+  const bst_float distTo( struct bst_cmplx other ) const {
     bst_float tmpR = other.r - r;
     bst_float tmpI = other.i - i;
     return tmpR*tmpR + tmpI*tmpI;
   }
-  bool within( struct bst_cmplx other, bst_float dist ) {
+  const bool within( struct bst_cmplx other, bst_float dist ) const {
     return distTo( other ) < dist;
   }
   bool operator==( struct bst_cmplx other ) {

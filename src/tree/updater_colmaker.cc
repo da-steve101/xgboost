@@ -545,7 +545,7 @@ class ColMaker: public TreeUpdater {
     // update the solution candidate
     virtual void UpdateSolution(const ColBatch& batch,
                                 const std::vector<bst_gpair>& gpair,
-                                const DMatrix& fmat) {
+                                const DMatrix& fmat ) {
       const MetaInfo& info = fmat.info();
       // start enumeration
       const bst_omp_uint nsize = static_cast<bst_omp_uint>(batch.size);
@@ -690,13 +690,10 @@ class ColMaker: public TreeUpdater {
             const float fvalue = col[j].fvalue;
             // go back to parent, correct those who are not default
             if (!tree[nid].is_leaf() && tree[nid].split_index() == fid) {
-	      if ( (fvalue < tree[nid].split_cond() &&
-		    tree[nid].split_index() != p_fmat->GetCmplxIdx() ) ||
-		   (!tree[nid].split_cmplx().within(p_fmat->GetCmplxFtr()[col[j].index], tree[nid].split_cond()) &&
-		    tree[nid].split_index() == p_fmat->GetCmplxIdx() ) ) {
-                this->SetEncodePosition(ridx, tree[nid].cleft());
+	      if ( tree[nid].split_index() == p_fmat->GetCmplxIdx() ) {
+                this->SetEncodePosition(ridx, tree.GetNext( nid, p_fmat->GetCmplxFtr()[col[j].index], false ) );
               } else {
-                this->SetEncodePosition(ridx, tree[nid].cright());
+                this->SetEncodePosition(ridx, tree.GetNext( nid, fvalue, false ) );
               }
             }
           }
@@ -825,13 +822,16 @@ class DistColMaker : public ColMaker<TStats> {
             const float fvalue = col[j].fvalue;
             const int nid = this->DecodePosition(ridx);
             if (!tree[nid].is_leaf() && tree[nid].split_index() == fid) {
-              if ( (fvalue < tree[nid].split_cond() &&
-		    tree[nid].split_index() != p_fmat->GetCmplxIdx() ) ||
-		   (!tree[nid].split_cmplx().within(p_fmat->GetCmplxFtr()[col[j].index], tree[nid].split_cond()) &&
-		    tree[nid].split_index() == p_fmat->GetCmplxIdx() ) ) {
-                if (!tree[nid].default_left()) boolmap[ridx] = 1;
+              if ( tree[nid].split_index() == p_fmat->GetCmplxIdx() ) {
+		if ( !(tree[nid].split_cmplx().within(p_fmat->GetCmplxFtr()[ridx], fvalue)) ) {
+		  if (!tree[nid].default_left()) boolmap[ridx] = 1;
+		} else
+		  if ( tree[nid].default_left()) boolmap[ridx] = 1;
               } else {
-                if (tree[nid].default_left()) boolmap[ridx] = 1;
+                if ( fvalue < tree[nid].split_cond() ) {
+		  if (!tree[nid].default_left()) boolmap[ridx] = 1;
+		} else
+		  if ( tree[nid].default_left()) boolmap[ridx] = 1;
               }
             }
           }

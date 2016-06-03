@@ -119,7 +119,7 @@ class TreeModel {
       return this->split_cmplx_val;
     }
     /*! \brief get cmplx split point of the node */
-    inline void split_cmplx( cmplx new_cmplx) {
+    inline void split_cmplx( const cmplx new_cmplx) {
       this->split_cmplx_val = new_cmplx;
     }
     /*! \brief get parent of the node */
@@ -291,7 +291,7 @@ class TreeModel {
     for ( unsigned nid = 0; nid < nodes.size(); nid++ ) {
       if ( !nodes[nid].is_leaf() ) continue;
       // get vector of indexs that have value == nid
-      std::vector<unsigned> idxs;// the positions that have value == nid
+      std::vector<unsigned> idxs(0);// the positions that have value == nid
       for ( unsigned i = 0; i < position.size(); ++i ) {
 	if ( position[i] == static_cast<int>(nid) )
 	  idxs.push_back( i );
@@ -552,6 +552,22 @@ class RegTree: public TreeModel<bst_float, RTreeNodeStat> {
    * \return the string of dumped model
    */
   std::string Dump2Text(const FeatureMap& fmap, bool with_stats) const;
+  /*! \brief dump the structure of the tree */
+  void strTree( const int pid ) const {
+    if ( (*this)[pid].is_leaf() ) {
+      cmplx tmp = (*this)[pid].split_cmplx();
+      LOG(WARNING) << pid << " = ( v = " << (*this)[pid].leaf_value() << ", r = " << tmp.r << ", i = " << tmp.i << ")";
+      return;
+    }
+    int leftPid = (*this)[pid].cleft();
+    int rightPid = (*this)[pid].cright();
+    float fvalue = (*this)[pid].split_cond();
+    cmplx cvalue = (*this)[pid].split_cmplx();
+    unsigned split_index = (*this)[pid].split_index();
+    LOG(WARNING) << pid << " = ( l = " << leftPid << ", r = " << rightPid << " f = " << fvalue << ", c.r = " << cvalue.r << ",c.i = " <<  cvalue.i << ", idx = " << split_index << ")";
+    strTree( leftPid );
+    strTree( rightPid );
+  }
 };
 
 // implementations of inline functions
@@ -643,7 +659,6 @@ inline int RegTree::GetNext(int pid, cmplx cvalue, bool is_unknown) const {
     }
   }
 }
-
  
 }  // namespace xgboost
 #endif  // XGBOOST_TREE_MODEL_H_

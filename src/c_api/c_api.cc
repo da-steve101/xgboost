@@ -462,7 +462,6 @@ int XGDMatrixGetComplexInfo(const DMatrixHandle handle,
   const std::vector<cmplx>* vec = nullptr;
   if (!std::strcmp(field, "cmplxFtr")) {
     vec = &(static_cast<const DMatrix*>(handle)->GetCmplxFtr());
-    LOG(WARNING) << "Complex Ftr size = " << vec->size();
   } else {
     LOG(FATAL) << "Unknown float field name " << field;
   }

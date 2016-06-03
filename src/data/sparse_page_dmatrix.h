@@ -52,6 +52,22 @@ class SparsePageDMatrix : public DMatrix {
     return col_size_[cidx];
   }
 
+  std::vector<cmplx>& GetCmplxFtr() override {
+    return source_.get()->cmplx_data;
+  }
+
+  const std::vector<cmplx>& GetCmplxFtr() const override {
+    return source_.get()->cmplx_data;
+  }
+
+  bst_uint& GetCmplxIdx() override {
+    return source_.get()->cindex;
+  }
+
+  const bst_uint& GetCmplxIdx() const override {
+    return source_.get()->cindex;
+  }
+
   float GetColDensity(size_t cidx) const override {
     size_t nmiss = buffered_rowset_.size() - col_size_[cidx];
     return 1.0f - (static_cast<float>(nmiss)) / buffered_rowset_.size();
