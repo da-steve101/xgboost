@@ -349,6 +349,7 @@ class DMatrix {
       for ( unsigned i = 0; i < cmplxFtr.size(); i++ )
         entries.push_back( SparseBatch::Entry( i, 0 ) );
     }
+    #pragma omp parallel
     for( unsigned i = 0; i < cmplxFtr.size(); ++i ) {
       int nid = positions[entries[i].index];
       if ( nid < 0 ) nid = ~nid;
