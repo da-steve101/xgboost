@@ -288,6 +288,7 @@ class TreeModel {
   /*! \brief set node leaf cvalues */
   inline void GenLeafCmplx( const std::vector<cmplx> cmplxFtr,
 			    const std::vector<int> position ) {
+    #pragma omp parallel
     for ( unsigned nid = 0; nid < nodes.size(); nid++ ) {
       if ( !nodes[nid].is_leaf() ) continue;
       // get vector of indexs that have value == nid
