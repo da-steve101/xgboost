@@ -222,11 +222,19 @@ class GBTree : public GradientBooster {
         CHECK_LT(static_cast<size_t>(ridx), info.num_row);
         // loop over output groups
         for (int gid = 0; gid < mparam.num_output_group; ++gid) {
-          this->Pred(batch[i],
-                     buffer_offset < 0 ? -1 : buffer_offset + ridx,
-                     gid, info.GetRoot(ridx), &feats, cvals[i],
-                     &preds[ridx * mparam.num_output_group + gid], stride,
-                     ntree_limit);
+	  if ( batch.useCmplx ) {
+	    this->Pred(batch[i],
+		       buffer_offset < 0 ? -1 : buffer_offset + ridx,
+		       gid, info.GetRoot(ridx), &feats, cvals[i],
+		       &preds[ridx * mparam.num_output_group + gid], stride,
+		       ntree_limit);
+	  } else {
+	    this->Pred(batch[i],
+		       buffer_offset < 0 ? -1 : buffer_offset + ridx,
+		       gid, info.GetRoot(ridx), &feats, bst_cmplx(),
+		       &preds[ridx * mparam.num_output_group + gid], stride,
+		       ntree_limit);
+	  }
         }
       }
     }

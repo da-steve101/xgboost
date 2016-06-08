@@ -8,6 +8,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/omp.h>
+#include <cmath>
 
 /*!
  * \brief string flag for R library, to leave hooks when needed.
@@ -39,6 +40,8 @@
 #define XGBOOST_CUSTOMIZE_GLOBAL_PRNG  XGBOOST_STRICT_R_MODE
 #endif
 
+#define EARTH_RADIUS 6371
+
 /*! \brief namespace of xgboost*/
 namespace xgboost {
 /*!
@@ -57,9 +60,11 @@ struct bst_cmplx {
   bst_cmplx( void ) {}
   bst_cmplx( bst_float r, bst_float i ) : r(r), i(i) {}
   const bst_float distTo( struct bst_cmplx other ) const {
-    bst_float tmpR = other.r - r;
     bst_float tmpI = other.i - i;
-    return tmpR*tmpR + tmpI*tmpI;
+    bst_float tmpR = other.r - r;
+    tmpR = std::pow( std::sin( tmpR / 2 ), 2 ) + std::cos( r )*std::cos( other.r ) * std::pow( std::sin( tmpI/2 ), 2 );
+    tmpR = 2 * std::asin( std::min( (float)1.0, std::sqrt( tmpR ) ) ) * EARTH_RADIUS;
+    return tmpR;
   }
   const bool within( struct bst_cmplx other, bst_float dist ) const {
     return distTo( other ) < dist;

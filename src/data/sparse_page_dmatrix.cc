@@ -123,6 +123,7 @@ ColIterator(const std::vector<bst_uint>& fset,
 	    const std::vector<cmplx> nodeSplits,
 	    const std::vector<int> positions ) {
   // TODO: implement complex for pages ...
+  LOG(FATAL) << "Sparse page with complex feature is not implemented";
   return ColIterator( fset );
 }
 

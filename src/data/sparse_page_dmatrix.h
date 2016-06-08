@@ -84,7 +84,7 @@ class SparsePageDMatrix : public DMatrix {
   dmlc::DataIter<ColBatch>* ColIterator(const std::vector<bst_uint>& fset,
 					const std::vector<cmplx> nodeSplits,
 					const std::vector<int> positions ) override;
-  
+
   void InitColAccess(const std::vector<bool>& enabled,
                      float subsample,
                      size_t max_row_perbatch) override;

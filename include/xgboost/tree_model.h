@@ -593,7 +593,7 @@ inline void RegTree::FVec::Fill(const RowBatch::Inst& inst, const cmplx cvalue) 
   cval = cvalue;
   cflag = 0;
 }
- 
+
 inline void RegTree::FVec::Drop(const RowBatch::Inst& inst) {
   for (bst_uint i = 0; i < inst.length; ++i) {
     if (inst[i].index >= data.size()) continue;
@@ -609,7 +609,7 @@ inline float RegTree::FVec::fvalue(size_t i) const {
 inline cmplx RegTree::FVec::cvalue() const {
   return cval;
 }
- 
+
 inline bool RegTree::FVec::is_missing(size_t i) const {
   return ( i == cindex ) ? cflag == -1 : data[i].flag == -1;
 }
@@ -659,6 +659,6 @@ inline int RegTree::GetNext(int pid, cmplx cvalue, bool is_unknown) const {
     }
   }
 }
- 
+
 }  // namespace xgboost
 #endif  // XGBOOST_TREE_MODEL_H_
