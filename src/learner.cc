@@ -256,9 +256,6 @@ class LearnerImpl : public Learner {
       attributes_ = std::map<std::string, std::string>(
           attr.begin(), attr.end());
     }
-    if (metrics_.size() == 0) {
-      metrics_.emplace_back(Metric::Create(obj_->DefaultEvalMetric()));
-    }
     this->base_score_ = mparam.base_score;
     gbm_->ResetPredBuffer(pred_buffer_size_);
     cfg_["num_class"] = common::ToString(mparam.num_class);
@@ -307,6 +304,9 @@ class LearnerImpl : public Learner {
     std::ostringstream os;
     os << '[' << iter << ']'
        << std::setiosflags(std::ios::fixed);
+    if (metrics_.size() == 0) {
+      metrics_.emplace_back(Metric::Create(obj_->DefaultEvalMetric()));
+    }
     for (size_t i = 0; i < data_sets.size(); ++i) {
       this->PredictRaw(data_sets[i], &preds_);
       obj_->EvalTransform(&preds_);
@@ -328,6 +328,22 @@ class LearnerImpl : public Learner {
     if (it == attributes_.end()) return false;
     *out = it->second;
     return true;
+  }
+
+  bool DelAttr(const std::string& key) override {
+    auto it = attributes_.find(key);
+    if (it == attributes_.end()) return false;
+    attributes_.erase(it);
+    return true;
+  }
+
+  std::vector<std::string> GetAttrNames() const override {
+    std::vector<std::string> out;
+    out.reserve(attributes_.size());
+    for (auto& p : attributes_) {
+      out.push_back(p.first);
+    }
+    return out;
   }
 
   std::pair<std::string, float> Evaluate(DMatrix* data, std::string metric) {
@@ -429,9 +445,6 @@ class LearnerImpl : public Learner {
 
     // reset the base score
     mparam.base_score = obj_->ProbToMargin(mparam.base_score);
-    if (metrics_.size() == 0) {
-      metrics_.emplace_back(Metric::Create(obj_->DefaultEvalMetric()));
-    }
 
     this->base_score_ = mparam.base_score;
     gbm_->ResetPredBuffer(pred_buffer_size_);
