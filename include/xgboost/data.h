@@ -259,9 +259,8 @@ class DMatrix {
    */
   virtual dmlc::DataIter<ColBatch>* ColIterator(const std::vector<bst_uint>& fset) = 0;
   /*! \brief Also set the complex features */
-  virtual dmlc::DataIter<ColBatch> *ColIterator(const std::vector<bst_uint> &fset,
-						const std::vector<cmplx> nodeSplits,
-						const std::vector<int> positions ) = 0;
+  virtual void UpdateIterDist(const std::vector<cmplx> nodeSplits,
+			      const std::vector<int> positions ) = 0;
   /*!
    * \brief check if column access is supported, if not, initialize column access.
    * \param enabled whether certain feature should be included in column access.
@@ -358,7 +357,7 @@ class DMatrix {
     std::sort( entries.begin(), entries.end(), SparseBatch::Entry::CmpValue );
   }
   const bool UseCmplx( void ) const {
-    return this->GetCmplxFtr().size() != 0;
+    return ( this->GetCmplxFtr().size() != 0 ) && ( this->GetCmplxIdx() != -1 );
   }
  private:
   // allow learner class to access this field.

@@ -54,17 +54,15 @@ dmlc::DataIter<ColBatch>* SimpleDMatrix::ColIterator(const std::vector<bst_uint>
       col_iter_.col_index_.push_back(fset[i]);
   }
   col_iter_.BeforeFirst();
+  col_iter_.cindex = this->GetCmplxIdx();
+  col_iter_.cmplxFtr = &(this->GetCmplxFtr());
   return &col_iter_;
 }
 
-dmlc::DataIter<ColBatch>* SimpleDMatrix::ColIterator(const std::vector<bst_uint>&fset,
-						     const std::vector<cmplx> nodeSplits,
-						     const std::vector<int> positions ) {
-  col_iter_.cindex = this->GetCmplxIdx();
-  col_iter_.cmplxFtr = &(this->GetCmplxFtr());
-  if ( std::find( fset.begin(), fset.end(), col_iter_.cindex ) != fset.end() )
-    this->UpdateDist(nodeSplits, positions, col_iter_.cmplxDist );
-  return ColIterator( fset );
+void SimpleDMatrix::UpdateIterDist(const std::vector<cmplx> nodeSplits,
+				   const std::vector<int> positions ) {
+
+  this->UpdateDist(nodeSplits, positions, col_iter_.cmplxDist );
 }
 
 void SimpleDMatrix::InitColAccess(const std::vector<bool> &enabled,

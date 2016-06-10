@@ -75,12 +75,14 @@ void SimpleCSRSource::LoadBinary(dmlc::Stream* fi) {
   std::vector<bst_float> cmplxI(0);
   cmplxR.resize( info.num_row );
   cmplxI.resize( info.num_row );
-  fi->Read(dmlc::BeginPtr(cmplxR), info.num_row*sizeof(bst_float));
-  fi->Read(dmlc::BeginPtr(cmplxI), info.num_row*sizeof(bst_float));
   cmplx_data.resize(0);
-  cmplx_data.reserve( cmplxR.size() );
-  for ( unsigned i = 0; i < cmplxR.size(); i++ )
-    cmplx_data.push_back( bst_cmplx( cmplxR[i], cmplxI[i] ) );
+  if ( cindex != -1 ) {
+    fi->Read(dmlc::BeginPtr(cmplxR), info.num_row*sizeof(bst_float));
+    fi->Read(dmlc::BeginPtr(cmplxI), info.num_row*sizeof(bst_float));
+    cmplx_data.reserve( cmplxR.size() );
+    for ( unsigned i = 0; i < cmplxR.size(); i++ )
+      cmplx_data.push_back( bst_cmplx( cmplxR[i], cmplxI[i] ) );
+  }
 }
 
 void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
@@ -99,8 +101,10 @@ void SimpleCSRSource::SaveBinary(dmlc::Stream* fo) const {
     cmplxR.push_back( cmplx_data[i].r );
     cmplxI.push_back( cmplx_data[i].i );
   }
-  fo->Write(dmlc::BeginPtr(cmplxR), cmplxR.size()*sizeof(bst_float));
-  fo->Write(dmlc::BeginPtr(cmplxI), cmplxR.size()*sizeof(bst_float));
+  if ( cindex != -1 ) {
+    fo->Write(dmlc::BeginPtr(cmplxR), cmplxR.size()*sizeof(bst_float));
+    fo->Write(dmlc::BeginPtr(cmplxI), cmplxR.size()*sizeof(bst_float));
+  }
 }
 
 void SimpleCSRSource::BeforeFirst() {

@@ -118,13 +118,9 @@ ColIterator(const std::vector<bst_uint>& fset) {
   return col_iter_.get();
 }
 
-dmlc::DataIter<ColBatch>* SparsePageDMatrix::
-ColIterator(const std::vector<bst_uint>& fset,
-	    const std::vector<cmplx> nodeSplits,
-	    const std::vector<int> positions ) {
-  // TODO: implement complex for pages ...
+void SparsePageDMatrix::UpdateIterDist(const std::vector<cmplx> nodeSplits,
+				       const std::vector<int> positions ) {
   LOG(FATAL) << "Sparse page with complex feature is not implemented";
-  return ColIterator( fset );
 }
 
 

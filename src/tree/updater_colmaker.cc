@@ -593,12 +593,11 @@ class ColMaker: public TreeUpdater {
             << "colsample_bylevel is too small that no feature can be included";
         feat_set.resize(n);
       }
-      dmlc::DataIter<ColBatch>* iter;
-      if ( p_fmat->UseCmplx() ) {
+      if ( p_fmat->UseCmplx() && ( std::find(feat_set.begin(), feat_set.end(), p_fmat->GetCmplxIdx()) != feat_set.end() ) ) {
 	p_tree->GenLeafCmplx( p_fmat->GetCmplxFtr(), position );
-	iter = p_fmat->ColIterator(feat_set, p_tree->GetNodeCvals(), position);
-      } else
-	iter = p_fmat->ColIterator(feat_set);
+	p_fmat->UpdateIterDist( p_tree->GetNodeCvals(), position);
+      }
+      dmlc::DataIter<ColBatch>* iter = p_fmat->ColIterator(feat_set);
       while (iter->Next()) {
         this->UpdateSolution(iter->Value(), gpair, *p_fmat);
       }
@@ -679,11 +678,7 @@ class ColMaker: public TreeUpdater {
       }
       std::sort(fsplits.begin(), fsplits.end());
       fsplits.resize(std::unique(fsplits.begin(), fsplits.end()) - fsplits.begin());
-      dmlc::DataIter<ColBatch> *iter;
-      if ( p_fmat->UseCmplx() )
-	iter = p_fmat->ColIterator(fsplits, tree.GetNodeCvals(), position);
-      else
-	iter = p_fmat->ColIterator(fsplits);
+      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits);
       while (iter->Next()) {
         const ColBatch &batch = iter->Value();
         for (size_t i = 0; i < batch.size; ++i) {
@@ -816,11 +811,7 @@ class DistColMaker : public ColMaker<TStats> {
             boolmap[j] = 0;
         }
       }
-      dmlc::DataIter<ColBatch> *iter;
-      if ( p_fmat->UseCmplx() )
-	iter = p_fmat->ColIterator(fsplits, tree.GetNodeCvals(), this->position);
-      else
-	iter = p_fmat->ColIterator(fsplits);
+      dmlc::DataIter<ColBatch> *iter = p_fmat->ColIterator(fsplits);
       while (iter->Next()) {
         const ColBatch &batch = iter->Value();
         for (size_t i = 0; i < batch.size; ++i) {

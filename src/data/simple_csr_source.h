@@ -35,7 +35,7 @@ class SimpleCSRSource : public DataSource {
   std::vector<RowBatch::Entry> row_data_;
   // functions
   /*! \brief default constructor */
-  SimpleCSRSource() : row_ptr_(1, 0), at_first_(true) {}
+  SimpleCSRSource() : row_ptr_(1, 0), at_first_(true) { cindex = -1; }
   /*! \brief destructor */
   virtual ~SimpleCSRSource() {}
   /*! \brief clear the data structure */
